@@ -1,3 +1,5 @@
+// player -> position(x,y), powerups, 
+
 
 
 function setup() {
