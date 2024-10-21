@@ -17,6 +17,25 @@ let player1NameInput, player2NameInput;
 let player1Name = "Player 1", player2Name = "Player 2";
 let player1Wins = 0, player2Wins = 0; // Track player wins/losses
 
+
+let player1Animations = {};
+let player2Animations = {};
+
+function preload() {
+  // Load animations for player 1
+  player1Animations.standing = loadImage("player-1-sprites/standing.png");
+  player1Animations.running = [loadImage("player-1-sprites/running/tile000.png"), loadImage("player-1-sprites/running/tile001.png"), loadImage("player-1-sprites/running/tile002.png"), loadImage("player-1-sprites/running/tile003.png")];
+  player1Animations.jumping = loadImage("player-1-sprites/jumping/tile001.png")
+  player1Animations.attacking = [loadImage("player-1-sprites/attacking/tile000.png"), loadImage("player-1-sprites/attacking/tile001.png"), loadImage("player-1-sprites/attacking/tile002.png"), loadImage("player-1-sprites/attacking/tile003.png"), loadImage("player-1-sprites/attacking/tile004.png")];
+
+  // Load animations for player 2
+  player2Animations.standing = loadImage("player-2-sprites/standing.png");
+  player2Animations.running = [loadImage("player-2-sprites/running/tile000.png"), loadImage("player-2-sprites/running/tile001.png"), loadImage("player-2-sprites/running/tile002.png"), loadImage("player-2-sprites/running/tile003.png")];
+  player2Animations.jumping = loadImage("player-2-sprites/jumping/tile001.png")
+  player2Animations.attacking = [loadImage("player-2-sprites/attacking/tile000.png"), loadImage("player-2-sprites/attacking/tile001.png"), loadImage("player-2-sprites/attacking/tile002.png"), loadImage("player-2-sprites/attacking/tile003.png"), loadImage("player-2-sprites/attacking/tile004.png")];
+}
+
+
 function setup() {
   createCanvas(820, 800); // Increase the width for the divider (800 + 20px divider)
 
@@ -43,8 +62,8 @@ function startGame() {
   startButton.hide();
 
   // Create two players
-  player1 = new Player(150, worldHeight - 50, 'red', 65, 68, 87, 'Z'); // A, D, W for movement, Z for attack
-  player2 = new Player(650, worldHeight - 50, 'blue', LEFT_ARROW, RIGHT_ARROW, UP_ARROW, '/'); // Arrow keys for movement, / for attack
+  player1 = new Player(150, worldHeight - 50, 'red', 65, 68, 87, 'Z', player1Animations); // A, D, W for movement, Z for attack
+  player2 = new Player(650, worldHeight - 50, 'blue', LEFT_ARROW, RIGHT_ARROW, UP_ARROW, '/', player2Animations); // Arrow keys for movement, / for attack
 
   generateInitialPlatforms();
   gameState = "playing";
@@ -130,7 +149,7 @@ function generateNewPlatforms() {
 }
 
 class Player {
-  constructor(x, y, color, leftKey, rightKey, jumpKey, attackKey) {
+  constructor(x, y, color, leftKey, rightKey, jumpKey, attackKey, animations) {
     this.x = x;
     this.y = y;
     this.width = 30;
@@ -145,7 +164,9 @@ class Player {
     this.attackKey = attackKey;  // Attack key (Z or /)
     this.attackCooldown = 0; // Track cooldown timer
     this.freezeTime = 0;  // Track how long the player is frozen for
-    this.attackPower = attackDisplacement;  // Track how strong the player's attack is
+    this.animations = animations;
+    this.currentAnimation = "standing"; // Initial animation
+    this.animationFrame = 0;
   }
 
   update() {
@@ -153,9 +174,14 @@ class Player {
       // Horizontal movement
       if (keyIsDown(this.leftKey)) {
         this.x -= this.speed;
-      }
-      if (keyIsDown(this.rightKey)) {
+        this.currentAnimation = "running"; // Switch to running animation
+
+      } else if (keyIsDown(this.rightKey)) {
         this.x += this.speed;
+        this.currentAnimation = "running"; // Switch to running animation
+
+      } else {
+        this.currentAnimation = "standing"; // Switch to standing when no movement
       }
     } else {
       // Reduce freeze timer
@@ -203,6 +229,11 @@ class Player {
       this.isJumping = false;
     }
 
+    if (this.isJumping) {
+      this.currentAnimation = "jumping";
+    }
+
+
     // Reduce cooldown timer if it's active
     if (this.attackCooldown > 0) {
       this.attackCooldown -= deltaTime;
@@ -219,6 +250,8 @@ class Player {
     // Only allow attack if cooldown is 0
     if (this.attackCooldown === 0) {
       // Randomly displace the other player on the x-axis
+      this.currentAnimation = "attacking";
+
       let displacement = random(-this.attackPower, this.attackPower);  // Use attackPower which can be boosted by power-ups
       otherPlayer.x += displacement;
 
@@ -234,8 +267,25 @@ class Player {
   }
 
   display() {
-    fill(this.color);
-    rect(this.x, this.y, this.width, this.height);
+    let currentImage;
+
+    if (this.currentAnimation === 'running') {
+      currentImage = this.animations.running[this.animationFrame % this.animations.running.length];
+      if (frameCount % 5 === 0) { // Change frame every 5 frames
+        this.animationFrame++;
+      }
+    } else if (this.currentAnimation === 'jumping') {
+      currentImage = this.animations.jumping;
+    } else if (this.currentAnimation === 'attacking') {
+      currentImage = this.animations.attacking[this.animationFrame % this.animations.attacking.length];
+      if (frameCount % 5 === 0) {
+        this.animationFrame++;
+      }
+    } else {
+      currentImage = this.animations.standing;
+    }
+
+    image(currentImage, this.x, this.y, this.width, this.height);
   }
 }
 
