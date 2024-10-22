@@ -157,34 +157,35 @@ class Player {
     this.color = color;
     this.speed = 5;
     this.velocityY = 0;
-    this.isJumping = false; // Prevent double jumps
+    this.isJumping = false;
     this.leftKey = leftKey;
     this.rightKey = rightKey;
     this.jumpKey = jumpKey;
-    this.attackKey = attackKey;  // Attack key (Z or /)
-    this.attackCooldown = 0; // Track cooldown timer
-    this.freezeTime = 0;  // Track how long the player is frozen for
+    this.attackKey = attackKey;
+    this.attackCooldown = 0;
+    this.freezeTime = 0;
     this.animations = animations;
-    this.currentAnimation = "standing"; // Initial animation
+    this.currentAnimation = "standing";
     this.animationFrame = 0;
+    this.attackPower = attackDisplacement;
+    this.facingRight = true; // Add facing direction tracker
   }
 
   update() {
     if (this.freezeTime <= 0) {
-      // Horizontal movement
+      // Update facing direction based on movement
       if (keyIsDown(this.leftKey)) {
         this.x -= this.speed;
-        this.currentAnimation = "running"; // Switch to running animation
-
+        this.currentAnimation = "running";
+        this.facingRight = false; // Facing left
       } else if (keyIsDown(this.rightKey)) {
         this.x += this.speed;
-        this.currentAnimation = "running"; // Switch to running animation
-
+        this.currentAnimation = "running";
+        this.facingRight = true; // Facing right
       } else {
-        this.currentAnimation = "standing"; // Switch to standing when no movement
+        this.currentAnimation = "standing";
       }
     } else {
-      // Reduce freeze timer
       this.freezeTime -= deltaTime;
     }
 
@@ -233,7 +234,6 @@ class Player {
       this.currentAnimation = "jumping";
     }
 
-
     // Reduce cooldown timer if it's active
     if (this.attackCooldown > 0) {
       this.attackCooldown -= deltaTime;
@@ -246,32 +246,23 @@ class Player {
     this.x = constrain(this.x, 0, width / 2 - dividerWidth / 2 - this.width);
   }
 
-  attack(otherPlayer) {
-    // Only allow attack if cooldown is 0
-    if (this.attackCooldown === 0) {
-      // Randomly displace the other player on the x-axis
-      this.currentAnimation = "attacking";
-
-      let displacement = random(-this.attackPower, this.attackPower);  // Use attackPower which can be boosted by power-ups
-      otherPlayer.x += displacement;
-
-      // Ensure the displaced player stays within their screen
-      if (otherPlayer.x < 0) otherPlayer.x = 0;
-      if (otherPlayer.x + otherPlayer.width > width / 2 - dividerWidth / 2) {
-        otherPlayer.x = width / 2 - dividerWidth / 2 - otherPlayer.width;
-      }
-
-      // Start the cooldown
-      this.attackCooldown = attackCooldownTime;
-    }
-  }
-
   display() {
+    push(); // Save the current transformation state
+
+    if (!this.facingRight) {
+      // If facing left, translate to x position + width and scale by -1 to flip horizontally
+      translate(this.x + this.width, this.y);
+      scale(-1, 1);
+    } else {
+      // If facing right, just translate to position
+      translate(this.x, this.y);
+    }
+
     let currentImage;
 
     if (this.currentAnimation === 'running') {
       currentImage = this.animations.running[this.animationFrame % this.animations.running.length];
-      if (frameCount % 5 === 0) { // Change frame every 5 frames
+      if (frameCount % 5 === 0) {
         this.animationFrame++;
       }
     } else if (this.currentAnimation === 'jumping') {
@@ -285,7 +276,30 @@ class Player {
       currentImage = this.animations.standing;
     }
 
-    image(currentImage, this.x, this.y, this.width, this.height);
+    // Draw the image at origin (0,0) since we've already translated
+    image(currentImage, 0, 0, this.width, this.height);
+
+    pop(); // Restore the transformation state
+  }
+
+  attack(otherPlayer) {
+    if (this.attackCooldown === 0) {
+      this.currentAnimation = "attacking";
+      this.animationFrame = 0;
+
+      let direction = random() > 0.5 ? 1 : -1;
+      let displacement = direction * this.attackPower;
+
+      otherPlayer.x += displacement;
+      otherPlayer.x = constrain(
+        otherPlayer.x,
+        0,
+        width / 2 - dividerWidth / 2 - otherPlayer.width
+      );
+
+      this.attackCooldown = attackCooldownTime;
+      otherPlayer.freezeTime = 200;
+    }
   }
 }
 
