@@ -16,6 +16,9 @@ let startButton;
 let player1NameInput, player2NameInput;
 let player1Name = "Player 1", player2Name = "Player 2";
 let player1Wins = 0, player2Wins = 0; // Track player wins/losses
+let powerUps = [];
+let powerUpSpawnInterval = 5000; // Spawn a power-up every 5 seconds
+let lastPowerUpSpawn = 0;
 
 
 let player1Animations = {};
@@ -72,12 +75,30 @@ function startGame() {
 function draw() {
   if (gameState === "menu") {
     background(150);
+
+    // Title
     textSize(32);
     fill(0);
     textAlign(CENTER, CENTER);
     text("Enter Player Names and Press Start", width / 2, height / 4);
+
+    // Power-up reference
+    textSize(18);
+    fill(0);
+    textAlign(CENTER);
+    text("Power-Up Effects:", width / 2, height / 2 + 100);
+
+    // Red power-up description
+    fill(255, 0, 0);  // Red color
+    text("Red Power-Up: Displaces the opponent more", width / 2, height / 2 + 130);
+
+    // Blue power-up description
+    fill(0, 0, 255);  // Blue color
+    text("Blue Power-Up: Freezes the opponent for 5 seconds", width / 2, height / 2 + 160);
+
   } else if (gameState === "playing") {
     background(200);
+    spawnPowerUp();
 
     player1.update(player2);
     player2.update(player1);
@@ -86,6 +107,18 @@ function draw() {
     displayPlayerView(player2, width / 2 + dividerWidth); // Right view for Player 2
 
     drawDivider();
+
+    for (let powerUp of powerUps) {
+      if (powerUp.active) {
+        if (powerUp.checkCollision(player1)) {
+          player1.applyPowerUp(powerUp.type);
+          powerUp.active = false;
+        } else if (powerUp.checkCollision(player2)) {
+          player2.applyPowerUp(powerUp.type);
+          powerUp.active = false;
+        }
+      }
+    }
 
     // Check if either player wins
     if (player1.y < goalHeight || player2.y < goalHeight) {
@@ -104,22 +137,58 @@ function draw() {
   }
 }
 
+
 function displayPlayerView(player, offsetX) {
   push();
-  translate(offsetX, 0);           // Move to either the left or right side of the canvas
-  let offsetY = height / 2 - player.y;  // Center the player's view vertically
-  translate(0, offsetY);           // Scroll the view based on player's position
+  translate(offsetX, 0); // Move to either the left or right side of the canvas
+  let offsetY = height / 2 - player.y; // Center the player's view vertically
+  translate(0, offsetY);   // Scroll the view based on player's position
 
+  // Draw platforms
   for (let platform of platforms) {
     platform.display();
   }
 
+  // Display power-ups
+  for (let powerUp of powerUps) {
+    powerUp.display();
+  }
+
+  // Draw ground
   fill(100);
   rect(0, worldHeight - groundHeight, width / 2 - dividerWidth / 2, groundHeight); // Adjust for split screen (half width minus divider)
 
-  // Draw the player
+  // Display the player
   player.display();
+
   pop();
+
+  // Display equipped power-up in the top-left corner of the player's view
+  displayPowerUp(player, offsetX);
+}
+
+// Function to display the equipped power-up in absolute screen coordinates
+function displayPowerUp(player, offsetX) {
+  push();  // Save transformation state
+  textSize(16);
+  let powerUpLabel = "";
+
+  if (player.powerUpType === 'displacement') {
+    powerUpLabel = "Power-Up: Displacement";
+    fill(255, 0, 0);  // Red color for displacement power-up
+  } else if (player.powerUpType === 'freezing') {
+    powerUpLabel = "Power-Up: Freezing";
+    fill(0, 0, 255);  // Blue color for freezing power-up
+  } else {
+    powerUpLabel = "Power-Up: None";
+    fill(0);  // Default color (black) for no power-up
+  }
+
+  // Display the power-up text in the top-left corner of the player's screen
+  textAlign(LEFT, TOP);
+  text(powerUpLabel, offsetX + 10, 10);  // Adjust positioning based on offsetX for each player
+
+  pop();  // Restore transformation state
 }
 
 function drawDivider() {
@@ -168,7 +237,22 @@ class Player {
     this.currentAnimation = "standing";
     this.animationFrame = 0;
     this.attackPower = attackDisplacement;
-    this.facingRight = true; // Add facing direction tracker
+    this.facingRight = true;  // Add facing direction tracker
+
+    this.attackPowerBase = attackDisplacement;
+    this.attackPower = this.attackPowerBase;
+    this.powerUpType = null;  // Track the type of power-up ('displacement' or 'freezing')
+  }
+
+  // Only keep the latest power-up equipped
+  applyPowerUp(type) {
+    // Overwrite any previously equipped power-up
+    if (type === 'displacement') {
+      this.attackPower = this.attackPowerBase * 2; // Double the attack power
+      this.powerUpType = 'displacement';
+    } else if (type === 'freezing') {
+      this.powerUpType = 'freezing'; // Set for freezing attack
+    }
   }
 
   update() {
@@ -177,11 +261,11 @@ class Player {
       if (keyIsDown(this.leftKey)) {
         this.x -= this.speed;
         this.currentAnimation = "running";
-        this.facingRight = false; // Facing left
+        this.facingRight = false;
       } else if (keyIsDown(this.rightKey)) {
         this.x += this.speed;
         this.currentAnimation = "running";
-        this.facingRight = true; // Facing right
+        this.facingRight = true;  // Facing left
       } else {
         this.currentAnimation = "standing";
       }
@@ -192,12 +276,15 @@ class Player {
     // Apply gravity
     this.velocityY += gravity;
 
+    // Calculate next position
+    let nextY = this.y + this.velocityY;
+
     // Collision detection with platforms and the ground
     let onPlatform = false;
     for (let platform of platforms) {
       if (this.x + this.width > platform.x && this.x < platform.x + platform.width) {
         // Check if player is on top of the platform
-        if (this.y + this.height <= platform.y && this.y + this.height + this.velocityY > platform.y) {
+        if (this.y + this.height <= platform.y && nextY + this.height > platform.y) {
           this.y = platform.y - this.height;
           this.velocityY = 0;
           this.isJumping = false;
@@ -205,17 +292,10 @@ class Player {
           break;
         }
         // Check if player is below the platform
-        else if (this.y >= platform.y + platform.height && this.y + this.velocityY < platform.y + platform.height) {
+        else if (this.y >= platform.y + platform.height && nextY < platform.y + platform.height) {
           this.y = platform.y + platform.height;
           this.velocityY = 0;
-        }
-        // Check if player is colliding from the sides
-        else if (this.y + this.height > platform.y && this.y < platform.y + platform.height) {
-          if (this.x < platform.x) {
-            this.x = platform.x - this.width;
-          } else {
-            this.x = platform.x + platform.width;
-          }
+          break;
         }
       }
     }
@@ -287,21 +367,41 @@ class Player {
       this.currentAnimation = "attacking";
       this.animationFrame = 0;
 
-      let direction = random() > 0.5 ? 1 : -1;
-      let displacement = direction * this.attackPower;
+      // Check if the power-up type is 'freezing'
+      if (this.powerUpType === 'freezing') {
+        // Apply freezing effect
+        otherPlayer.freezeTime = 5000; // Freeze for 5 seconds
+        this.powerUpType = null; // Clear the power-up after use
 
-      otherPlayer.x += displacement;
-      otherPlayer.x = constrain(
-        otherPlayer.x,
-        0,
-        width / 2 - dividerWidth / 2 - otherPlayer.width
-      );
+      } else if (this.powerUpType === 'displacement') {
+        // Apply displacement attack
+        let direction = this.facingRight ? 1 : -1;
+        let displacement = direction * this.attackPower;
+        otherPlayer.x += displacement;
+        otherPlayer.x = constrain(
+          otherPlayer.x,
+          0,
+          width / 2 - dividerWidth / 2 - otherPlayer.width
+        );
+        this.powerUpType = null; // Clear the power-up after use
 
-      this.attackCooldown = attackCooldownTime;
-      otherPlayer.freezeTime = 200;
+      } else {
+        // Standard attack without power-up
+        let direction = this.facingRight ? 1 : -1;
+        let displacement = direction * this.attackPowerBase;
+        otherPlayer.x += displacement;
+        otherPlayer.x = constrain(
+          otherPlayer.x,
+          0,
+          width / 2 - dividerWidth / 2 - otherPlayer.width
+        );
+      }
+
+      this.attackCooldown = attackCooldownTime; // Set the cooldown for next attack
     }
   }
 }
+
 
 class Platform {
   constructor(x, y, width, height) {
@@ -314,6 +414,50 @@ class Platform {
   display() {
     fill(0, 150, 0);
     rect(this.x, this.y, this.width, this.height);
+  }
+}
+
+class PowerUp {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = 20;
+    this.height = 20;
+    this.color = random() > 0.5 ? 'red' : 'blue'; // Randomly decide power-up type (red = displacement, blue = freezing)
+    this.type = this.color === 'red' ? 'displacement' : 'freezing'; // Set the type based on color
+    this.active = true;
+  }
+
+  display() {
+    if (this.active) {
+      fill(this.color);
+      rect(this.x, this.y, this.width, this.height);
+    }
+  }
+
+  checkCollision(player) {
+    if (!this.active) return false;
+
+    return (
+      player.x < this.x + this.width &&
+      player.x + player.width > this.x &&
+      player.y < this.y + this.height &&
+      player.y + player.height > this.y
+    );
+  }
+}
+
+// Modify the spawnPowerUp function to spawn either type of power-up
+function spawnPowerUp() {
+  if (millis() - lastPowerUpSpawn > powerUpSpawnInterval) {
+    // Select a random platform
+    if (platforms.length > 0) {
+      let platform = random(platforms);
+      let powerUpX = platform.x + platform.width / 2 - 10; // Center on platform
+      let powerUpY = platform.y - 30; // Place above platform
+      powerUps.push(new PowerUp(powerUpX, powerUpY)); // Spawn new power-up
+      lastPowerUpSpawn = millis();
+    }
   }
 }
 
@@ -362,8 +506,9 @@ function keyPressed() {
 
 function resetGame() {
   gameState = "menu";
-  player1Wins = 0;
-  player2Wins = 0;
+  platforms = []
+  powerUps = []; // Clear all power-ups
+  lastPowerUpSpawn = 0;
   player1NameInput.show();
   player2NameInput.show();
   startButton.show();
