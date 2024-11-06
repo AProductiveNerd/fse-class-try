@@ -23,6 +23,7 @@ let lastPowerUpSpawn = 0;
 
 let player1Animations = {};
 let player2Animations = {};
+let backgroundImage;
 
 function preload() {
   // Load animations for player 1
@@ -36,6 +37,8 @@ function preload() {
   player2Animations.running = [loadImage("player-2-sprites/running/tile000.png"), loadImage("player-2-sprites/running/tile001.png"), loadImage("player-2-sprites/running/tile002.png"), loadImage("player-2-sprites/running/tile003.png")];
   player2Animations.jumping = loadImage("player-2-sprites/jumping/tile001.png")
   player2Animations.attacking = [loadImage("player-2-sprites/attacking/tile000.png"), loadImage("player-2-sprites/attacking/tile001.png"), loadImage("player-2-sprites/attacking/tile002.png"), loadImage("player-2-sprites/attacking/tile003.png"), loadImage("player-2-sprites/attacking/tile004.png")];
+
+  backgroundImage = loadImage("background.jpg");
 }
 
 
@@ -74,7 +77,8 @@ function startGame() {
 
 function draw() {
   if (gameState === "menu") {
-    background(150);
+    image(backgroundImage, 0, 0, width, height);
+
 
     // Title
     textSize(32);
@@ -97,7 +101,8 @@ function draw() {
     text("Blue Power-Up: Freezes the opponent for 5 seconds", width / 2, height / 2 + 160);
 
   } else if (gameState === "playing") {
-    background(200);
+    image(backgroundImage, 0, 0, width, height);
+
     spawnPowerUp();
 
     player1.update(player2);
@@ -136,6 +141,8 @@ function draw() {
     displayEndScreen();
   }
 }
+
+
 
 
 function displayPlayerView(player, offsetX) {
@@ -513,3 +520,5 @@ function resetGame() {
   player2NameInput.show();
   startButton.show();
 }
+
+
