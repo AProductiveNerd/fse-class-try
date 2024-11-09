@@ -469,7 +469,8 @@ function spawnPowerUp() {
 }
 
 function displayEndScreen() {
-  background(150);
+  // background(150);
+  image(backgroundImage, 0, 0, width, height);
   textSize(32);
   fill(0);
   textAlign(CENTER, CENTER);
