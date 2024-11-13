@@ -27,16 +27,16 @@ let backgroundImage;
 
 function preload() {
   // Load animations for player 1
-  player1Animations.standing = loadImage("player-1-sprites/standing.png");
-  player1Animations.running = [loadImage("player-1-sprites/running/tile000.png"), loadImage("player-1-sprites/running/tile001.png"), loadImage("player-1-sprites/running/tile002.png"), loadImage("player-1-sprites/running/tile003.png")];
-  player1Animations.jumping = loadImage("player-1-sprites/jumping/tile001.png")
-  player1Animations.attacking = [loadImage("player-1-sprites/attacking/tile000.png"), loadImage("player-1-sprites/attacking/tile001.png"), loadImage("player-1-sprites/attacking/tile002.png"), loadImage("player-1-sprites/attacking/tile003.png"), loadImage("player-1-sprites/attacking/tile004.png")];
+  player1Animations.standing = loadImage("player-1-standing.png");
+  player1Animations.running = [loadImage("player-1-running/tile000.png"), loadImage("player-1-running/tile001.png"), loadImage("player-1-running/tile002.png"), loadImage("player-1-running/tile003.png")];
+  player1Animations.jumping = loadImage("player-1-jumping.png")
+  player1Animations.attacking = [loadImage("player-1-attacking/tile000.png"), loadImage("player-1-attacking/tile001.png"), loadImage("player-1-attacking/tile002.png"), loadImage("player-1-attacking/tile003.png"), loadImage("player-1-attacking/tile004.png")];
 
   // Load animations for player 2
-  player2Animations.standing = loadImage("player-2-sprites/standing.png");
-  player2Animations.running = [loadImage("player-2-sprites/running/tile000.png"), loadImage("player-2-sprites/running/tile001.png"), loadImage("player-2-sprites/running/tile002.png"), loadImage("player-2-sprites/running/tile003.png")];
-  player2Animations.jumping = loadImage("player-2-sprites/jumping/tile001.png")
-  player2Animations.attacking = [loadImage("player-2-sprites/attacking/tile000.png"), loadImage("player-2-sprites/attacking/tile001.png"), loadImage("player-2-sprites/attacking/tile002.png"), loadImage("player-2-sprites/attacking/tile003.png"), loadImage("player-2-sprites/attacking/tile004.png")];
+  player2Animations.standing = loadImage("player-2-standing.png");
+  player2Animations.running = [loadImage("player-2-running/tile000.png"), loadImage("player-2-running/tile001.png"), loadImage("player-2-running/tile002.png"), loadImage("player-2-running/tile003.png")];
+  player2Animations.jumping = loadImage("player-2-jumping.png")
+  player2Animations.attacking = [loadImage("player-2-attacking/tile000.png"), loadImage("player-2-attacking/tile001.png"), loadImage("player-2-attacking/tile002.png"), loadImage("player-2-attacking/tile003.png"), loadImage("player-2-attacking/tile004.png")];
 
   backgroundImage = loadImage("background.jpg");
 }
